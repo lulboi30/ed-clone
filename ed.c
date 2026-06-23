@@ -21,7 +21,11 @@ int main(int argc, char** argv) {
 	char** lines = malloc(sizeof(char*));
 	int lines_allocated = 1;
 	int lines_used = 0;
+	int current_line = 0;
 	bool shouldrun = true;
+
+	char* lformat = malloc(16); // just in case
+	strcpy(lformat, "%-8i| %s");
 
 	while (fgets(line, 256, f) != NULL) {
 		lines_used++;
@@ -49,6 +53,9 @@ int main(int argc, char** argv) {
 	}
 
 	while (shouldrun) {
+		// c: command
+		// i: insert
+	
 		fputs("[c] ", stdout);
 		fgets(line, 256, stdin);
 
@@ -64,30 +71,35 @@ int main(int argc, char** argv) {
 		}
 
 		switch (line[index]) {
-			case 'q':
+			case 'q': // quit
 				shouldrun = false;
 				break;
-			case 'p':
+			case 'p': // print
 				switch (line[index + 1]) {
-					case '\n':
-					case '\0':
-					case ' ':
+					case '\n': // all lines #1
+					case '\0': // all lines #2
+					case ' ':  // all lines #3
 						for (int i = 0; i < lines_used; i++) {
 							fputs(lines[i], stdout);
 						}
 						
 						break;
-					case 'n':
+					case 'n': // all lines, numbered
 						for (int i = 0; i < lines_used; i++) {
-							printf("%08i\u2502 %s", i, lines[i]);
+							// 0s looked ugly
+							// now you can customize it
+							printf(lformat, i, lines[i]);
 						}
 					
 						break;
+					case 'c': // current line
+						fputs(lines[current_line], stdout);
+						break;
 				}
 
+				// specific line
 				if (isdigit(line[index + 1])) {
 					int userline = 0;
-
 					sscanf(line + index + 1, "%i", &userline);
 
 					if (userline > lines_used - 1) {
@@ -98,6 +110,52 @@ int main(int argc, char** argv) {
 					fputs(lines[userline], stdout);
 				}
 				
+				break;
+			case 's': // set option
+				switch (line[index + 1]) {
+					case 'l': // line
+						switch (line[index + 2]) {
+							case 'n': // number
+								int userline = 0;
+								sscanf(line + index + 3, "%i", &userline);
+
+								if (userline > lines_used - 1) {
+									printf("line %i is out of bounds\n", userline);
+								} else {
+									current_line = userline;
+								}
+																
+								break;
+							case 'f': // format
+								memset(lformat, 0, 16);
+
+								switch (line[index + 3]) {
+									case 'l': // left aligned
+										strcat(lformat, "%-8i");
+										break;
+									case 'r': // right aligned
+										strcat(lformat, "%8i");
+										break;
+									case '0': // 0 aligned
+										strcat(lformat, "%08i");
+										break;
+								}
+
+								char last[5];
+								last[0] = line[index + 4];
+								last[1] = ' ';
+								last[2] = '%';
+								last[3] = 's';
+								last[4] = '\0';
+
+								strcat(lformat, last);
+								
+								break;
+						}
+						
+						break;
+				}
+
 				break;
 			default:
 				printf("unknown operation '%c'\n", line[index]);
